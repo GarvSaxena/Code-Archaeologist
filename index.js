@@ -7,10 +7,22 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
+function line() {
+    console.log("============================================================");
+}
+
+function section(title) {
+    console.log();
+    line();
+    console.log(title);
+    line();
+}
+
 function showMenu() {
-    console.log("\n================================================");
-    console.log("              CODE ARCHAEOLOGIST");
-    console.log("================================================");
+
+    line();
+    console.log("                    CODE ARCHAEOLOGIST");
+    line();
 
     rl.question("\nEnter the path: ", (dirPath) => {
 
@@ -19,7 +31,7 @@ function showMenu() {
             getDirStats(dirPath);
         }
         else {
-            console.log("\n❌ Invalid path!");
+            console.log("\nInvalid path!\n");
             showMenu();
         }
     });
@@ -34,118 +46,141 @@ function getDirStats(dirPath) {
     if (stats.isDirectory()) {
         type = "Directory";
     }
-    else if (stats.isFile()) {
+    else {
         type = "File";
     }
 
-    console.log("Project Information");
-    console.log("------------------------------------------------");
+    section("PROJECT INFORMATION");
+
     console.log(`Name : ${path.basename(dirPath)}`);
     console.log(`Type : ${type}`);
 
     if (stats.isDirectory()) {
-        showDirContents(dirPath);
+        scanDir(dirPath);
     }
-
-    if (stats.isDirectory()) {
-        showItemExtensions(dirPath);
-    }
-    else if (stats.isFile()) {
+    else {
         console.log("\nSingle file selected.");
     }
 
-    console.log("\n================================================\n");
+    console.log();
+    line();
+    console.log("Analysis Complete");
+    line();
 
     rl.close();
 }
 
-function showDirContents(dirPath) {
+function scanDir(dirPath) {
 
     let dirCount = 0;
     let fileCount = 0;
-    let largestFileSize = 0;
-    let largestFileName = "";
     let totalSize = 0;
-    const content = fs.readdirSync(dirPath);
 
-    console.log("\nContents");
-    console.log("------------------------------------------------");
+    let largestFileName = "None";
+    let largestFileSize = 0;
 
-    content.forEach((item) => {
-
-        const itemPath = path.join(dirPath, item);
-
-        const itemStats = fs.statSync(itemPath);
-
-        let itemType;
-        
-        if (itemStats.isDirectory()) {
-            itemType = "Directory";
-            dirCount++;
-        }
-        else if (itemStats.isFile()) {
-            itemType = "File";
-            fileCount++;
-            if(itemStats.size>largestFileSize){
-                largestFileSize = itemStats.size;
-                largestFileName = item;
-            }
-        }
-
-        console.log(
-            `${item.padEnd(25)} ${itemType.padEnd(12)} ${String(itemStats.size).padStart(8)} B`
-        );
-        totalSize +=itemStats.size;
-    });
-    if (fileCount === 0) {
-        console.log("Name : None");
-        console.log("Size : 0 B");
-    }
-
-    console.log("------------------------------------------------");
-    console.log(`Directories       : ${dirCount}`);
-    console.log(`Files             : ${fileCount}`);
-    console.log(`Largest file      : ${largestFileName}      : ${largestFileSize}`)
-    console.log(`Total size        : ${totalSize}`)
-}
-
-function showItemExtensions(dirPath) {
-
-    const content = fs.readdirSync(dirPath);
     const extensions = {};
 
-    content.forEach((item) => {
+    section("CONTENTS");
 
-        // Complete path
-        const itemPath = path.join(dirPath, item);
+    console.log(
+        `${"Path".padEnd(50)}${"Type".padEnd(15)}Size`
+    );
 
-        // Get stats
-        const itemStats = fs.statSync(itemPath);
+    console.log("-".repeat(75));
 
-        // Count only files
-        if (itemStats.isFile()) {
+    function traverse(currentPath) {
 
-            const ext = path.extname(itemPath);
+        const content = fs.readdirSync(currentPath);
 
-            if (extensions[ext]) {
-                extensions[ext]++;
+        content.forEach((item) => {
+
+            if (
+                item === "node_modules" ||
+                item === ".git"
+            ) {
+                return;
+            }
+
+            const itemPath = path.join(currentPath, item);
+            const itemStats = fs.statSync(itemPath);
+
+            let itemType;
+
+            if (itemStats.isDirectory()) {
+
+                itemType = "Directory";
+                dirCount++;
+
             }
             else {
-                extensions[ext] = 1;
+
+                itemType = "File";
+                fileCount++;
+
+                totalSize += itemStats.size;
+
+                if (itemStats.size > largestFileSize) {
+                    largestFileSize = itemStats.size;
+                    largestFileName = itemPath;
+                }
+
+                const ext = path.extname(itemPath);
+
+                if (extensions[ext]) {
+                    extensions[ext]++;
+                }
+                else {
+                    extensions[ext] = 1;
+                }
             }
-        }
-    });
 
-    console.log("\nExtensions");
-    console.log("------------------------------------------------");
+            console.log(
+                `${itemPath.padEnd(50)}${itemType.padEnd(15)}${itemStats.size} B`
+            );
 
-    for (const ext in extensions) {
-        console.log(
-            `${(ext || "[no extension]").padEnd(20)} ${extensions[ext]}`
-        );
+            if (itemStats.isDirectory()) {
+                traverse(itemPath);
+            }
+        });
     }
 
-    console.log("------------------------------------------------");
+    traverse(dirPath);
+
+    section("STATISTICS");
+
+    console.log(`Directories : ${dirCount}`);
+    console.log(`Files       : ${fileCount}`);
+    console.log(`Total Size  : ${totalSize} B`);
+
+    console.log();
+
+    console.log("Largest File");
+    console.log("-".repeat(30));
+
+    console.log(`Name : ${largestFileName}`);
+    console.log(`Size : ${largestFileSize} B`);
+
+    section("EXTENSIONS");
+
+    if (Object.keys(extensions).length === 0) {
+        console.log("No files found.");
+    }
+    else {
+
+        console.log(
+            `${"Extension".padEnd(20)}Count`
+        );
+
+        console.log("-".repeat(30));
+
+        for (const ext in extensions) {
+
+            console.log(
+                `${(ext || "[no extension]").padEnd(20)}${extensions[ext]}`
+            );
+        }
+    }
 }
 
 showMenu();
