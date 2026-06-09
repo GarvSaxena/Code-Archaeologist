@@ -1,0 +1,15 @@
+fs module
+1) readdirsync - read data from directory synchronously
+2) readefilesync - read data from file synchronously
+3) statSync - get meta data of the file- 
+statSync returns a Stats object containing details such as:
+File size
+Creation time
+Modification time
+Whether it's a file or directory
+
+path module
+1) join - joins path segments togethor
+2) resolve - converts a sequence of paths into an absolute path.
+3) basename - get the last part of path( ex- /home/user/file.txt , output = file.txt)
+4) extname - returns the file extension
